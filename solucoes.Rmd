@@ -1,0 +1,62 @@
+---
+title: "Soluções"
+author: "Equipe CEPESPData"
+date: "August 10, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Perguntas
+
+- Representação de mulheres e negros na política
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+cand_2014 <- cepespR::get_candidates(2014, 6)
+
+cand_2014 %>% 
+  filter(DES_SITUACAO_CANDIDATURA %in% c("DEFERIDO", "DEFERIDO COM RECURSO")) %>% 
+  ggplot(mapping = aes(x = SIGLA_PARTIDO, fill = DESCRICAO_COR_RACA)) +
+  geom_bar(position = "fill") +
+  scale_fill_viridis_d() +
+  coord_flip()
+```
+
+- É possível montarmos o mapa eleitoral de 2014 do segundo turno em menos de um dia de trabalho/programação?
+
+- ftp://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2017/Brasil/BR/
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(sf)
+
+shape_mun <- read_sf("shape/BRMUE250GC_SIR.shp")
+
+votos_2014 <- cand_2014 <- cepespR::get_votes(2014, 1)
+
+votos_2014 <- votos_2014 %>% 
+  filter(NUM_TURNO == 2) 
+
+shape_mun <- shape_mun %>% 
+  mutate(CD_GEOCMU = as.numeric(CD_GEOCMU)) %>% 
+  rename(COD_MUN_IBGE = CD_GEOCMU) %>% 
+  left_join(votos_2014)
+
+vot_pt <- shape_mun %>% 
+  filter(NUMERO_CANDIDATO == 13) %>% 
+  ggplot(mapping = aes(fill = )) +
+  geom_sf()
+  
+vot_psbd <- shape_mun %>% 
+  filter(NUMERO_CANDIDATO == 45) %>% 
+  ggplot(mapping = aes(fill = )) +
+  geom_sf()
+```
+
