@@ -35,6 +35,7 @@ cand_2014 %>%
 
 library(dplyr)
 library(ggplot2)
+library(ggthemes)
 library(sf)
 
 shape_mun <- read_sf("shape/BRMUE250GC_SIR.shp")
@@ -51,12 +52,16 @@ shape_mun <- shape_mun %>%
 
 vot_pt <- shape_mun %>% 
   filter(NUMERO_CANDIDATO == 13) %>% 
-  ggplot(mapping = aes(fill = )) +
-  geom_sf()
+  ggplot(mapping = aes(fill = QTDE_VOTOS)) +
+  geom_sf(color = "white") +
+  coord_sf(datum = NA) +
+  theme_map()
   
 vot_psbd <- shape_mun %>% 
   filter(NUMERO_CANDIDATO == 45) %>% 
-  ggplot(mapping = aes(fill = )) +
-  geom_sf()
+  ggplot(mapping = aes(fill = QTDE_VOTOS)) +
+  geom_sf(color = "white") +
+  coord_sf(datum = NA) +
+  theme_map()
 ```
 
