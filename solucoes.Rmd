@@ -27,6 +27,16 @@ cand_2014 %>%
   coord_flip()
 ```
 
+```{r}
+cand_2014 %>% 
+  filter(DES_SITUACAO_CANDIDATURA %in% c("DEFERIDO", "DEFERIDO COM RECURSO")) %>% 
+  ggplot(mapping = aes(x = SIGLA_PARTIDO, fill = DESCRICAO_SEXO)) +
+  geom_bar(position = "fill") +
+  scale_fill_viridis_d() +
+  coord_flip()
+```
+
+
 - É possível montarmos o mapa eleitoral de 2014 do segundo turno em menos de um dia de trabalho/programação?
 
 - ftp://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2017/Brasil/BR/
@@ -40,10 +50,23 @@ library(sf)
 
 shape_mun <- read_sf("shape/BRMUE250GC_SIR.shp")
 
-votos_2014 <- cand_2014 <- cepespR::get_votes(2014, 1)
+votos_2014 <- cepespR::get_votes(2014, 1)
+
+conso_2014 <- cepespR::get_elections(year     = 2014,
+                                     position = 1,
+                                     political_aggregation = 4)
 
 votos_2014 <- votos_2014 %>% 
-  filter(NUM_TURNO == 2) 
+  filter(NUM_TURNO == 2) %>% 
+  mutate(COD_MUN_TSE = as.numeric(COD_MUN_TSE))
+
+conso_2014 <- conso_2014 %>% 
+  filter(NUM_TURNO == 2)
+
+votos_2014 <- votos_2014 %>% 
+  left_join(conso_2014, by = c("UF", "NUM_TURNO", "COD_MUN_TSE")) %>% 
+  mutate(PROP = QTDE_VOTOS / QTD_COMPARECIMENTO) %>% 
+  rename(COD_MUN_IBGE = NOME_MUNICIPIO.y)
 
 shape_mun <- shape_mun %>% 
   mutate(CD_GEOCMU = as.numeric(CD_GEOCMU)) %>% 
@@ -52,16 +75,22 @@ shape_mun <- shape_mun %>%
 
 vot_pt <- shape_mun %>% 
   filter(NUMERO_CANDIDATO == 13) %>% 
-  ggplot(mapping = aes(fill = QTDE_VOTOS)) +
-  geom_sf(color = "white") +
+  ggplot(mapping = aes(fill = PROP)) +
+  geom_sf(color = "white", size = 0.1) +
   coord_sf(datum = NA) +
+  scale_fill_viridis_c() +
   theme_map()
+
+ggsave("votos_pt.png", width = 10, height = 10)
   
 vot_psbd <- shape_mun %>% 
   filter(NUMERO_CANDIDATO == 45) %>% 
-  ggplot(mapping = aes(fill = QTDE_VOTOS)) +
-  geom_sf(color = "white") +
+  ggplot(mapping = aes(fill = PROP)) +
+  geom_sf(color = "white", size = 0.1) +
   coord_sf(datum = NA) +
+    scale_fill_viridis_c() +
   theme_map()
+
+ggsave("votos_psbd.png", width = 10, height = 10)
 ```
 
