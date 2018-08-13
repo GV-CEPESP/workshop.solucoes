@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Perguntas
 
-- Representação de mulheres e negros na política
+1. Representação de mulheres e negros na política
 
 ```{r}
 library(dplyr)
@@ -37,7 +37,7 @@ cand_2014 %>%
 ```
 
 
-- É possível montarmos o mapa eleitoral de 2014 do segundo turno em menos de um dia de trabalho/programação?
+2. É possível montarmos o mapa eleitoral de 2014 do segundo turno em menos de um dia de trabalho/programação?
 
 - ftp://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2017/Brasil/BR/
 
@@ -92,5 +92,16 @@ vot_psbd <- shape_mun %>%
   theme_map()
 
 ggsave("votos_psbd.png", width = 10, height = 10)
+```
+
+3. Quantos votos cada candidato a cargo legislativo recebeu em cada unidade geográfica?
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(sf)
+
+votos_2014 <- cepespR::get_votes(2014, 6)
 ```
 
