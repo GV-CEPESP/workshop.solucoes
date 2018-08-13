@@ -105,3 +105,122 @@ library(sf)
 votos_2014 <- cepespR::get_votes(2014, 6)
 ```
 
+4. Quantos candidatos professores temos em cada cargo?
+
+Exemplo para deputado Estadual 
+```{r}
+library(cepespR) #para baixar dados eleitorais
+library(dplyr) #para manipular os dados (filtros, somas, contagem, etc)
+
+anos_eleicao<-seq(1998, 2014, 4)
+
+for(j in anos_Presidente){
+  print(j)
+  x<-get_candidates(j, "Deputado Estadual")
+  if(j==1998){candidatos_DE<-x}else{candidatos_DE<-rbind(candidatos_DE,x)}
+  rm(x)
+}
+
+# vamos selecionar apenas as colunas que nos importam
+candidatos_DE<- candidatos_DE %>% select(ANO_ELEICAO, DESCRICAO_CARGO, NOME_CANDIDATO, NOME_URNA_CANDIDATO, NOME_PARTIDO, NUMERO_PARTIDO, DESCRICAO_OCUPACAO, DESCRICAO_GRAU_INSTRUCAO, DESC_SIT_TOT_TURNO)
+
+# e vamos criar uma coluna que diz se a ocupação é de professor ou não
+candidatos_DE<- candidatos_DE %>% mutate(professor =  ifelse(grepl("PROFESSOR", DESCRICAO_OCUPACAO),1,0))
+
+# e podemos ver como evoluiu a quantidado de professores candidatos a deputado estadual desde 1998
+candidatos_DE %>% group_by(ANO_ELEICAO) %>% filter(professor==1) %>% count()
+
+```
+Para outros cargos é só mudar a posição. Se quiser avaliar os eleitos é só olhar o campo "DESC_SIT_TOT_TURNO"
+
+5.  Qual o reduto de cada candidato a vereador no Rio de Janeiro?
+
+Para responder essa pergunta, seria necessário ter a localização de todos os locais de votação no rio de Janeiro. Como no site do CEPESP ainda não disponibilizamos essa localização, podemos fazer de maneira mais simples, vendo a votação por zona. 
+
+```{r}
+vereador_2016 <- get_votes(2016, "Vereador", regional_aggregation = "Zona", state = "RJ")
+
+```
+Informações de Zona por municipio está disponível em:(http://www.tse.jus.br/eleitor/servicos/cartorios-e-zonas-eleitorais/pesquisa-a-zonas-eleitorais)
+
+6. Qual partido teve mais votos pra prefeito anulado em cada eleição?
+Não temos como saber com exatidão quais votos foram anulados, mas podemos olhar pela situação de candidatura. 
+
+Primeiro precisamos baixar os dados:
+```{r}
+pref_2016<- get_elections(year=2016, position="Prefeito", regional_aggregation="Brasil", political_aggregation="Candidate")
+pref_2012<- get_elections(year=2012, position="Prefeito", regional_aggregation="Brasil", political_aggregation="Candidate")
+pref_2008<- get_elections(year=2008, position="Prefeito", regional_aggregation="Brasil", political_aggregation="Candidate")
+pref_2004<- get_elections(year=2004, position="Prefeito", regional_aggregation="Brasil", political_aggregation="Candidate")
+
+colunas<-c("ANO_ELEICAO", "NUM_TURNO", "NOME_CANDIDATO", "DES_SITUACAO_CANDIDATURA","NUMERO_PARTIDO", "SIGLA_PARTIDO","DESC_SIT_TOT_TURNO", "QTDE_VOTOS")
+
+pref_2016<-subset(pref_2016, select = colunas)
+pref_2012<-subset(pref_2012, select = colunas)
+pref_2008<-subset(pref_2008, select = colunas)
+pref_2004<-subset(pref_2004, select = colunas)
+
+# Agora vamos juntar as bases
+base_prefeitos<-rbind(pref_2016, pref_2012, pref_2008, pref_2004)
+rm(pref_2016, pref_2012, pref_2008, pref_2004) #e remover as antigas para otimizar
+
+# E filtrar apenas o primeiro turno
+base_prefeitos<-base_prefeitos %>% filter(NUM_TURNO==1)
+
+# Apenas para referência, podemos calcular quantos votos cada partido teve em cada eleição
+votos_por_partido<- base_prefeitos %>% group_by(ANO_ELEICAO, NUMERO_PARTIDO, SIGLA_PARTIDO) %>% 
+  summarise(VOTOS_TOTAL = sum(QTDE_VOTOS))
+
+```
+Para pegar os candidatos que tiveram algum problema com a candidatura é só filtrar todos que não tem a candidatura deferida ou tiveram resultado nulo na eleição. Depois só calcular por partido.
+```{r}
+base <- base_prefeitos %>% filter (DES_SITUACAO_CANDIDATURA != "DEFERIDO" | DESC_SIT_TOT_TURNO == "#NULO#")
+
+votos_anulados_por_partido<- base %>% group_by(ANO_ELEICAO, NUMERO_PARTIDO, SIGLA_PARTIDO) %>% 
+  summarise(VOTOS_TOTAL = sum(QTDE_VOTOS))
+
+```
+
+7. Como evoluiu a abstenção em cada estado e município? 
+Para entender como evoluiu a abstenção em cada estado e municipio, é só usar o get_elections na agregação política consolidada. 
+```{r}
+library(cepespR) #para baixar dados eleitorais
+library(dplyr) #para manipular os dados (filtros, somas, contagem, etc)
+```
+
+Então para estados, é só baixar as base no consolidado em todos os anos 
+
+```{r}
+anos_Prefeito<-seq(2000, 2016, 4)
+anos_Presidente<-seq(1998, 2014, 4)
+#baixar para Presidente
+for(j in anos_Presidente){
+  print(j)
+  x<-get_elections(j, "Presidente", regional_aggregation = "Estado", political_aggregation = "Consolidado")
+  if(j==1998){votos_presidente<-x}else{votos_presidente<-rbind(votos_presidente,x)}
+  rm(x)
+}
+
+#baixar para prefeito
+for(j in anos_Prefeito){
+  print(j)
+  x<-get_elections(j, "Prefeito", regional_aggregation = "Estado", political_aggregation = "Consolidado")
+  if(j==2000){votos_prefeito<-x}else{votos_prefeito<-rbind(votos_prefeito,x)}
+  rm(x)
+}
+
+# depois juntar as bases 
+abstencoes<- rbind(votos_prefeito, votos_presidente)
+
+# e calcular a abstenção por UE e turno
+abstencoes$Percentual_abstencao<- abstencoes$QTD_ABSTENCOES/abstencoes$QTD_APTOS
+
+# para facilitar a vizualização, podemos selecionar apenas as colunas que nos interessam
+abstencoes_UF<- subset(abstencoes, select = c("ANO_ELEICAO", "NUM_TURNO", "UF", "Percentual_abstencao"))
+
+write.csv(abstencoes_UF, "abstencoes_UF.csv")
+```
+Para fazer por municipio, basta rodar o mesmo código substituindo Estado por Municipio. 
+
+
+
